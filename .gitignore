@@ -1,0 +1,11 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+frontend/node_modules
+frontend/dist
+
+.vscode
+.yaml
+.env
