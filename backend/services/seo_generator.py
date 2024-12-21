@@ -50,7 +50,7 @@ class SEOGenerator:
             torch.cuda.empty_cache()
             gc.collect()
 
-    def generate(self, keywords, content_type='article'):
+    def generate(self, keywords):
         """
         根据关键词生成SEO优化的内容
         """
@@ -63,7 +63,7 @@ class SEOGenerator:
             tokenizer = self.en_tokenizer
         
         # 构建提示词
-        prompt = self._build_prompt(keywords, content_type)
+        prompt = self._build_prompt(keywords)
         
         try:
             # 生成文本
@@ -104,78 +104,35 @@ class SEOGenerator:
             self.clear_gpu_memory()
             raise Exception(f"内容生成失败: {str(e)}")
     
-    def _build_prompt(self, keywords, content_type):
+    def _build_prompt(self, keywords):
         """构建AI提示词"""
         if self.language == 'zh':
-            prompts = {
-                'article': f"""
+            prompts = f"""
                     请基于关键词"{keywords}"创作一篇SEO优化的文章，需要：
                     1. 标题要包含关键词，吸引点击
                     2. Meta描述要简洁有力，突出价值
-                    3. 正文要自然融入关键词，避免堆砌
-                    4. 分段合理，层次分明
-                    5. 结尾要有号召性用语
+                    3. 关键词准确
                     请按以下格式输出：
-                    标题：
-                    Meta描述：
-                    正文：
-                """,
-                'product': f"""
-                    请基于关键词"{keywords}"创作一段产品描述，需要：
-                    1. 突出产品核心卖点
-                    2. 自然融入关键词
-                    3. 描述要具体详实
-                    4. 包含产品规格信息
-                    请按以下格式输出：
-                    标题：
-                    描述：
-                    规格：
+                    {self.config.SEO_STRUCT['zh']}
                 """
-            }
         else:
-            prompts = {
-                'article': f"""
+            prompts = f"""
                     Create an SEO-optimized article based on the keyword "{keywords}". Requirements:
                     1. Title must include keywords and be click-worthy
                     2. Meta description should be concise and highlight value
-                    3. Content should naturally incorporate keywords
-                    4. Proper paragraphing and structure
-                    5. Include a call-to-action at the end
+                    3. Keywords should be accurate
                     Please output in the following format:
-                    Title:
-                    Meta Description:
-                    Content:
-                """,
-                'product': f"""
-                    Create a product description based on the keyword "{keywords}". Requirements:
-                    1. Highlight core product benefits
-                    2. Naturally incorporate keywords
-                    3. Detailed and specific description
-                    4. Include product specifications
-                    Please output in the following format:
-                    Title:
-                    Description:
-                    Specifications:
+                    {self.config.SEO_STRUCT['en']}
                 """
-            }
-        return prompts.get(content_type, prompts['article'])
+        return prompts
     
     def _parse_response(self, text):
         """解析生成的文本"""
         # 根据语言选择分隔符
-        if self.language == 'zh':
-            title_key = '标题'
-            meta_key = 'meta描述'
-            content_key = '正文'
-            desc_key = '描述'
-            spec_key = '规格'
-        else:
-            title_key = 'title'
-            meta_key = 'meta description'
-            content_key = 'content'
-            desc_key = 'description'
-            spec_key = 'specifications'
-        
+        title_key = 'title'
+        meta_key = 'meta_description'
+        key_words = 'keywords'
+    
         sections = text.split('\n')
         content = {}
         current_section = None
@@ -187,9 +144,9 @@ class SEOGenerator:
                 if section == title_key.lower():
                     current_section = 'title'
                 elif section in [meta_key.lower(), desc_key.lower()]:
-                    current_section = 'description'
-                elif section in [content_key.lower(), spec_key.lower()]:
-                    current_section = 'content'
+                    current_section = 'meta_description'
+                elif section in [key_words.lower(), spec_key.lower()]:
+                    current_section = 'keywords'
                 content[current_section] = ''
             elif current_section and line:
                 content[current_section] += line + '\n'

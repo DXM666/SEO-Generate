@@ -1,6 +1,7 @@
 import torch
-from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM
+from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM, AutoModelForCausalLM
 import gc
+from pprint import pprint
 
 def test_gpu():
     print("PyTorch version:", torch.__version__)
@@ -18,7 +19,7 @@ def clear_gpu_memory():
         torch.cuda.empty_cache()
         gc.collect()
 
-def test_models():
+def test_zh_models():
     print("\nTesting models...")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
@@ -61,37 +62,39 @@ def test_models():
     except Exception as e:
         print("Error loading Chinese model:", str(e))
     
+def test_en_modules():
+    print("\nTesting models...")
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
     # 测试英文模型
-    print("\nTesting English model (T5-small)...")
-    en_model_name = "google-t5/t5-small"
+    pprint("\nTesting English model...")
+    en_model_name = "meta-llama/Llama-3.2-3B-Instruct"
     try:
-        tokenizer = AutoTokenizer.from_pretrained(en_model_name)
-        model = AutoModelForSeq2SeqLM.from_pretrained(
+        tokenizer = AutoTokenizer.from_pretrained(en_model_name,use_auth_token=True)
+        model = AutoModelForCausalLM.from_pretrained(
             en_model_name,
             torch_dtype=torch.float16,  # 使用半精度
-            load_in_8bit=True,  # 8位量化
             device_map='auto',  # 自动设备映射
-            low_cpu_mem_usage=True,  # 低CPU内存使用
         )
-        print("English model loaded successfully!")
+        pprint("English model loaded successfully!")
         
         # 测试简单的生成
-        input_text = "translate English to Chinese: How are you?"
-        inputs = tokenizer(input_text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+        input_text = '''introduce yourself'''
+        inputs = tokenizer(input_text, return_tensors="pt")
+        pprint(input_text)
         if torch.cuda.is_available():
             inputs = {k: v.to(device) for k, v in inputs.items()}
         
         with torch.no_grad():
             outputs = model.generate(
                 input_ids=inputs['input_ids'],
-                max_length=100,
+                max_length=150,
                 num_return_sequences=1,
                 temperature=0.7,
                 do_sample=True,
-                pad_token_id=tokenizer.pad_token_id if tokenizer.pad_token_id else tokenizer.eos_token_id,
             )
         response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        print("Sample response:", response)
+        pprint("Sample response:", response)
         
         # 清理内存
         del model
@@ -103,4 +106,5 @@ def test_models():
 if __name__ == "__main__":
     print("Starting GPU and model tests...\n")
     test_gpu()
-    test_models()
+    # test_zh_models()
+    test_en_modules()

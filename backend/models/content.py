@@ -16,11 +16,10 @@ class ContentModel:
             str: 创建的记录ID
         """
         content = Content(
-            title=content_data.get('content', {}).get('标题', ''),
-            description=content_data.get('content', {}).get('meta描述', ''),
-            content=content_data.get('content', {}).get('正文', ''),
+            title=content_data.get('title', ''),
+            meta_description=content_data.get('meta_description', ''),
             keywords=content_data.get('keywords', ''),
-            content_type=content_data.get('type', 'article')
+            language=content_data.get('language', 'en')
         )
         return content.save()
 
@@ -67,14 +66,12 @@ class ContentModel:
         if content:
             if 'title' in update_data:
                 content.title = update_data['title']
-            if 'description' in update_data:
-                content.description = update_data['description']
-            if 'content' in update_data:
-                content.content = update_data['content']
+            if 'meta_description' in update_data:
+                content.meta_description = update_data['meta_description']
             if 'keywords' in update_data:
                 content.keywords = update_data['keywords']
-            if 'content_type' in update_data:
-                content.content_type = update_data['content_type']
+            if 'language' in update_data:
+                content.language = update_data['language']
             return content.save()
         return False
 
@@ -90,13 +87,12 @@ class ContentModel:
         """
         return db.delete_content(content_id)
 
-    def search(self, keywords, content_type=None, limit=10, skip=0):
+    def search(self, keywords, limit=10, skip=0):
         """
         搜索内容记录
         
         Args:
             keywords (str): 搜索关键词
-            content_type (str, optional): 内容类型
             limit (int): 每页记录数
             skip (int): 跳过的记录数
             
@@ -106,12 +102,10 @@ class ContentModel:
         return Content.search(keywords)
 
 class Content:
-    def __init__(self, title, description, content, keywords, content_type='article', language='en'):
+    def __init__(self, title, meta_description, keywords, language='en'):
         self.title = title
-        self.description = description
-        self.content = content
+        self.meta_description = meta_description
         self.keywords = keywords
-        self.content_type = content_type
         self.language = language
         self.created_at = datetime.now().isoformat()
 
@@ -119,10 +113,8 @@ class Content:
         """转换为字典格式"""
         return {
             'title': self.title,
-            'description': self.description,
-            'content': self.content,
+            'meta_description': self.meta_description,
             'keywords': self.keywords,
-            'content_type': self.content_type,
             'language': self.language,
             'created_at': self.created_at
         }
@@ -139,10 +131,8 @@ class Content:
             return None
         return Content(
             title=content_data['title'],
-            description=content_data['description'],
-            content=content_data['content'],
+            meta_description=content_data['meta_description'],
             keywords=content_data['keywords'],
-            content_type=content_data.get('content_type', 'article'),
             language=content_data.get('language', 'en')
         )
 
@@ -162,10 +152,8 @@ class Content:
         content_dicts = [
             Content(
                 title=c['title'],
-                description=c['description'],
-                content=c['content'],
+                meta_description=c['meta_description'],
                 keywords=c['keywords'],
-                content_type=c.get('content_type', 'article'),
                 language=c.get('language', 'en')
             ).to_dict()
             for c in contents_list

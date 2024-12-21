@@ -44,9 +44,9 @@ class Database:
     def search_contents(self, query_text):
         """搜索内容"""
         # 简单的关键词匹配搜索
-        query = self.Query.keywords.search(query_text, flags='i') | \
-                self.Query.title.search(query_text, flags='i') | \
-                self.Query.content.search(query_text, flags='i')
+        query = self.Query.title.search(query_text, flags='i') | \
+                self.Query.meta_description.search(query_text, flags='i') | \
+                self.Query.keywords.search(query_text, flags='i')
         return self.contents.search(query)
 
     def get_analytics(self, start_date=None, end_date=None):

@@ -20,18 +20,16 @@ class Config:
         self.TEMPERATURE = float(os.getenv('TEMPERATURE', '0.7'))
         
         # SEO配置
-        self.SEO_CONFIG = {
-            'title': {
-                'min': 30,    # 最小标题长度
-                'max': 60     # 最大标题长度
+        self.SEO_STRUCT = {
+            "en":{
+                "title": "Best Wireless Headphones 2024 - Buyer's Guide",
+                "meta_description": "Check out our 2024 wireless headphones buying guide for the best Bluetooth headsets on the market.",
+                "keywords": ["wireless headphones", "best bluetooth earphones", "buyer's guide"],
             },
-            'description': {
-                'min': 150,   # 最小描述长度
-                'max': 160    # 最大描述长度
-            },
-            'content': {
-                'min': 300,   # 最小内容长度
-                'max': 3000   # 最大内容长度
+            "zh":{
+                "title": "2024年最好的无线耳机购买指南",
+                "meta_description": "了解2024年无线耳机购买指南，了解市场上最好的蓝牙耳机。",
+                "keywords": ["无线耳机", "最好的蓝牙耳机", "购买指南"],
             }
         }
         
