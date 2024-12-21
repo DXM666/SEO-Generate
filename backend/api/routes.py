@@ -2,7 +2,6 @@ from flask import Blueprint, jsonify, request, send_file
 from ..services.seo_generator import SEOGenerator
 from ..services.content_validator import ContentValidator
 from ..services.analytics_service import AnalyticsService
-from ..services.batch_service import BatchService
 from ..models.content import Content
 import io
 
@@ -12,7 +11,6 @@ api_bp = Blueprint('api', __name__)
 seo_generator = SEOGenerator()
 content_validator = ContentValidator()
 analytics_service = AnalyticsService()
-batch_service = BatchService()
 
 @api_bp.route('/generate', methods=['POST'])
 def generate_content():
@@ -165,30 +163,42 @@ def manage_content(content_id):
                 })
             return jsonify({
                 'success': False,
-                'error': 'Content not found'
+                'error': '内容不存在'
             }), 404
             
         elif request.method == 'PUT':
-            data = request.get_json()
             content = Content.get_by_id(content_id)
             if not content:
                 return jsonify({
                     'success': False,
-                    'error': 'Content not found'
+                    'error': '内容不存在'
                 }), 404
-            
-            # 更新内容
-            updated = content.update(data)
-            return jsonify({
-                'success': True,
-                'content': updated.to_dict()
-            })
+                
+            try:
+                update_data = request.get_json()
+                content.update(update_data)
+                return jsonify({
+                    'success': True,
+                    'content': content.to_dict()
+                })
+            except Exception as e:
+                return jsonify({
+                    'success': False,
+                    'error': f'更新内容失败: {str(e)}'
+                }), 500
             
         elif request.method == 'DELETE':
-            result = Content.delete(content_id)
-            return jsonify({
-                'success': result
-            })
+            try:
+                result = Content.delete(content_id)
+                return jsonify({
+                    'success': True,
+                    'message': '内容已删除'
+                })
+            except Exception as e:
+                return jsonify({
+                    'success': False,
+                    'error': str(e)
+                }), 500
             
     except Exception as e:
         return jsonify({
@@ -223,10 +233,20 @@ def search_contents():
     """
     try:
         query = request.args.get('q', '')
-        content_type = request.args.get('type')
+        if not query:
+            return jsonify({
+                'success': False,
+                'error': '搜索关键词不能为空'
+            }), 400
+            
         limit = int(request.args.get('limit', 10))
         
-        results = Content.search(query, content_type, limit)
+        # 搜索内容
+        results = Content.search(query, limit=limit)
+        
+        # 转换结果为字典
+        results = [Content.from_db_dict(r).to_dict() for r in results]
+        
         return jsonify({
             'success': True,
             'results': results,
@@ -235,172 +255,7 @@ def search_contents():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
-        }), 500
-
-@api_bp.route('/batch/generate', methods=['POST'])
-def batch_generate():
-    """
-    批量生成内容
-    
-    请求方式：POST
-    请求体：
-    {
-        "keywords": [
-            ["关键词1", "关键词2"],
-            ["关键词3", "关键词4"]
-        ],
-        "type": "article",     # 可选，内容类型
-        "language": "zh",      # 可选，语言
-        "length": "medium"     # 可选，内容长度
-    }
-    
-    返回：
-    {
-        "success": true,
-        "task_id": "xxx",     # 任务ID，用于查询进度
-        "total": 2            # 总任务数
-    }
-    """
-    try:
-        data = request.get_json()
-        keywords_list = data.get('keywords', [])
-        content_type = data.get('type', 'article')
-        language = data.get('language', 'zh')
-        length = data.get('length', 'medium')
-        
-        task_id = batch_service.create_task(keywords_list, content_type, language, length)
-        return jsonify({
-            'success': True,
-            'task_id': task_id,
-            'total': len(keywords_list)
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@api_bp.route('/batch/status/<task_id>', methods=['GET'])
-def get_batch_status(task_id):
-    """
-    获取批量任务状态
-    
-    请求方式：GET
-    
-    返回：
-    {
-        "success": true,
-        "status": "running",   # running/completed/failed
-        "progress": {
-            "total": 10,
-            "completed": 5,
-            "failed": 0
-        },
-        "results": [{
-            "keywords": ["关键词1", "关键词2"],
-            "content_id": "xxx",
-            "status": "success"
-        }]
-    }
-    """
-    try:
-        status = batch_service.get_task_status(task_id)
-        return jsonify({
-            'success': True,
-            **status
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@api_bp.route('/export', methods=['POST'])
-def export_contents():
-    """
-    导出内容
-    
-    请求方式：POST
-    请求体：
-    {
-        "content_ids": ["xxx", "yyy"],  # 可选，指定要导出的内容ID
-        "format": "csv",               # 必填，导出格式：csv/excel/json
-        "type": "article",            # 可选，按类型筛选
-        "language": "zh",             # 可选，按语言筛选
-        "date_range": {               # 可选，按日期范围筛选
-            "start": "2024-01-01",
-            "end": "2024-01-31"
-        }
-    }
-    
-    返回：文件流
-    """
-    try:
-        data = request.get_json()
-        content_ids = data.get('content_ids', [])
-        export_format = data.get('format', 'csv')
-        content_type = data.get('type')
-        language = data.get('language')
-        date_range = data.get('date_range')
-        
-        file_data = batch_service.export_contents(
-            content_ids, export_format, content_type, language, date_range
-        )
-        
-        return send_file(
-            io.BytesIO(file_data),
-            mimetype='application/octet-stream',
-            as_attachment=True,
-            download_name=f'contents.{export_format}'
-        )
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@api_bp.route('/import/keywords', methods=['POST'])
-def import_keywords():
-    """
-    导入关键词
-    
-    请求方式：POST
-    Content-Type: multipart/form-data
-    
-    表单参数：
-    - file: 必填，文件对象，支持csv/excel格式
-    - type: 可选，字符串，内容类型
-    - language: 可选，字符串，语言
-    
-    返回：
-    {
-        "success": true,
-        "task_id": "xxx",     # 任务ID，用于批量生成
-        "total": 100,         # 导入的关键词组数
-        "invalid": []         # 无效的行数据
-    }
-    """
-    try:
-        if 'file' not in request.files:
-            return jsonify({
-                'success': False,
-                'error': 'No file uploaded'
-            }), 400
-            
-        file = request.files['file']
-        content_type = request.form.get('type')
-        language = request.form.get('language')
-        
-        result = batch_service.import_keywords(file, content_type, language)
-        return jsonify({
-            'success': True,
-            **result
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
+            'error': f'搜索内容失败: {str(e)}'
         }), 500
 
 @api_bp.route('/analytics/overview', methods=['GET'])
