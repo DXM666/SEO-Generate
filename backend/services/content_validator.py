@@ -12,13 +12,13 @@ class ContentValidator:
         
     def validate(self, content):
         """
-        验证内容质量
+        验证SEO内容质量
         
         Args:
             content (dict): 需要验证的内容，包含以下字段：
                 - title: 标题
+                - metaDescription: Meta描述
                 - keywords: 关键词列表
-                - meta_description: Meta描述
                 
         Returns:
             dict: 验证结果，包括关键词密度、可读性等指标
@@ -26,16 +26,24 @@ class ContentValidator:
         if not content or not isinstance(content, dict):
             raise ValueError("内容格式无效")
 
-        required_fields = ['title', 'keywords', 'meta_description']
+        required_fields = ['title', 'metaDescription', 'keywords']
         if not all(field in content for field in required_fields):
             raise ValueError("缺少必要的内容字段")
 
+        # 标准化字段名称
+        normalized_content = {
+            'title': content['title'],
+            'meta_description': content['metaDescription'],  # 为了兼容性保留旧字段名
+            'keywords': content['keywords'],
+            'content': f"{content['title']} {content['metaDescription']}"  # 用于分析的组合文本
+        }
+
         validation_result = {
-            'keyword_density': self._check_keyword_density(content),
-            'readability': self._check_readability(content),
-            'seo_score': self._calculate_seo_score(content),
-            'content_structure': self._analyze_content_structure(content),
-            'meta_validation': self._validate_meta_info(content)
+            'keyword_density': self._check_keyword_density(normalized_content),
+            'readability': self._check_readability(normalized_content),
+            'seo_score': self._calculate_seo_score(normalized_content),
+            'content_structure': self._analyze_content_structure(normalized_content),
+            'meta_validation': self._validate_meta_info(normalized_content)
         }
         
         return validation_result
@@ -88,7 +96,7 @@ class ContentValidator:
         sentence_lengths = [len(s.strip()) for s in sentences if s.strip()]
         avg_sentence_length = sum(sentence_lengths) / len(sentence_lengths) if sentence_lengths else 0
         
-        # 分析段落长度
+        # 分析段落
         paragraph_lengths = [len(p.strip()) for p in paragraphs if p.strip()]
         avg_paragraph_length = sum(paragraph_lengths) / len(paragraph_lengths) if paragraph_lengths else 0
         

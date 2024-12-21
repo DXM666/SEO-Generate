@@ -22,49 +22,57 @@ def generate_content():
     请求方式：POST
     请求体：
     {
-        "keywords": "关键词1,关键词2",  # 必填，字符串，多个关键词用逗号分隔
+        "business_type": "string",  # 必填，业务类型描述
+        "language": "string"        # 可选，语言选择 (默认为 "en")
     }
     
     返回：
     {
         "success": true,
-        "content": {
-            "title": "标题",
-            "description": "描述",
+        "data": {
+            "title": "SEO优化的标题",
+            "metaDescription": "Meta描述",
             "keywords": ["关键词1", "关键词2"]
         },
         "validation": {
             "keyword_density": {...},
             "readability": {...},
             "seo_score": {...}
-        },
-        "content_id": "xxx"
+        }
     }
     """
-    data = request.get_json()
-    keywords = data.get('keywords', '')
-    
     try:
-        # 生成内容
-        generated_content = seo_generator.generate(keywords)
+        data = request.get_json()
+        if not data or 'business_type' not in data:
+            return jsonify({
+                'success': False,
+                'error': '缺少必要的business_type参数'
+            }), 400
+            
+        business_type = data['business_type']
+        
+        # 生成SEO内容
+        generated_content = seo_generator.generate_seo(business_type)
+        
         # 验证内容
         validation_result = content_validator.validate(generated_content)
         
         # 创建并保存内容
         content = Content(
-            title=generated_content.get('title', ''),
-            meta_description=generated_content.get('meta_description', ''),
-            keywords=generated_content.get('keywords', ''),
-            language=seo_generator.language
+            title=generated_content['title'],
+            meta_description=generated_content['metaDescription'],
+            keywords=generated_content['keywords'],
+            business_type=business_type
         )
         content_id = content.save()
         
         return jsonify({
             'success': True,
-            'content': generated_content,
+            'data': generated_content,
             'validation': validation_result,
             'content_id': content_id
         })
+        
     except Exception as e:
         return jsonify({
             'success': False,
@@ -80,8 +88,6 @@ def get_contents():
     请求参数：
     - limit: 可选，整数，每页数量，默认10
     - skip: 可选，整数，跳过数量，默认0
-    - type: 可选，字符串，内容类型筛选
-    - language: 可选，字符串，语言筛选
     
     返回：
     {
@@ -102,10 +108,8 @@ def get_contents():
     try:
         limit = int(request.args.get('limit', 10))
         skip = int(request.args.get('skip', 0))
-        content_type = request.args.get('type')
-        language = request.args.get('language')
         
-        contents, total = Content.get_list(limit, skip, content_type, language)
+        contents, total = Content.get_list(limit, skip)
         return jsonify({
             'success': True,
             'contents': contents,
@@ -201,7 +205,6 @@ def search_contents():
     请求参数：
     - q: 必填，字符串，搜索关键词
     - type: 可选，字符串，内容类型筛选
-    - language: 可选，字符串，语言筛选
     - limit: 可选，整数，返回数量限制，默认10
     
     返回：
@@ -221,10 +224,9 @@ def search_contents():
     try:
         query = request.args.get('q', '')
         content_type = request.args.get('type')
-        language = request.args.get('language')
         limit = int(request.args.get('limit', 10))
         
-        results = Content.search(query, content_type, language, limit)
+        results = Content.search(query, content_type, limit)
         return jsonify({
             'success': True,
             'results': results,

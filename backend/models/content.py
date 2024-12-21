@@ -19,7 +19,7 @@ class ContentModel:
             title=content_data.get('title', ''),
             meta_description=content_data.get('meta_description', ''),
             keywords=content_data.get('keywords', ''),
-            language=content_data.get('language', 'en')
+            business_type=content_data.get('business_type', '')
         )
         return content.save()
 
@@ -70,8 +70,8 @@ class ContentModel:
                 content.meta_description = update_data['meta_description']
             if 'keywords' in update_data:
                 content.keywords = update_data['keywords']
-            if 'language' in update_data:
-                content.language = update_data['language']
+            if 'business_type' in update_data:
+                content.business_type = update_data['business_type']
             return content.save()
         return False
 
@@ -102,11 +102,11 @@ class ContentModel:
         return Content.search(keywords)
 
 class Content:
-    def __init__(self, title, meta_description, keywords, language='en'):
+    def __init__(self, title, meta_description, keywords, business_type):
         self.title = title
         self.meta_description = meta_description
         self.keywords = keywords
-        self.language = language
+        self.business_type = business_type
         self.created_at = datetime.now().isoformat()
 
     def to_dict(self):
@@ -115,7 +115,7 @@ class Content:
             'title': self.title,
             'meta_description': self.meta_description,
             'keywords': self.keywords,
-            'language': self.language,
+            'business_type': self.business_type,
             'created_at': self.created_at
         }
 
@@ -133,7 +133,7 @@ class Content:
             title=content_data['title'],
             meta_description=content_data['meta_description'],
             keywords=content_data['keywords'],
-            language=content_data.get('language', 'en')
+            business_type=content_data.get('business_type', '')
         )
 
     @staticmethod
@@ -154,7 +154,7 @@ class Content:
                 title=c['title'],
                 meta_description=c['meta_description'],
                 keywords=c['keywords'],
-                language=c.get('language', 'en')
+                business_type=c.get('business_type', '')
             ).to_dict()
             for c in contents_list
         ]
